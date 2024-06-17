@@ -1,37 +1,37 @@
-import bs4 as soup
-import time as time
+from bs4 import BeautifulSoup
 import pandas as pd
 
-scraped_data = []
+html_content = 'wikitable'
+soup = BeautifulSoup(html_content, 'html.parser')
 
-def scrape():
-    bright_star_table = soup.find("table", attrs={"class","wikitable"})
+def scraped_data(soup):
+    bright_star_table = soup.find("table", attrs={"class": "wikitable"})
     table_body = bright_star_table.find("tbody")
-    table_rows = table_body.findall("tr")
+    table_rows = table_body.find_all("tr")
 
     for row in table_rows:
         table_cols = row.find_all('td')
-        print(table_cols)
         temp_list = []
 
         for col_data in table_cols:
-            print(col_data.text)
             data = col_data.text.strip()
-            print(data)
-            temp_list.append(data)
+            temp_list.append(data if data else None)
         scraped_data.append(temp_list)
 
+scraped_data(soup)
 stars_data = []
-for i in range(0,len(scraped_data)):
-    Star_names = scraped_data[i][1]
-    Distance = scraped_data[i][3]
-    Mass = scraped_data[i][5]
-    Radius = scraped_data[i][6]
-    Lum = scraped_data[i][7]
+for data in scraped_data:
+    if len(data) == 5 and all(data):
+        stars_data.append(data)
 
-    required_data = [Star_names, Distance, Mass, Radius, Lum]
-    stars_data.append(required_data)
+headers = ['Star_name', 'Distance', 'Mass', 'Radius', 'Luminosity']
+scraped_df = pd.DataFrame(stars_data, columns=headers)
 
-headers = ['Star_name','Distance','Mass','Radius','Luminosity']
-star_df_1 = pd.DataFrame(stars_data, columns=headers)
-star_df_1.to_csv('scraped_data.csv',index=True, index_label="id")
+scraped_df['Radius'] = scraped_df['Radius'].astype(float) * 0.102763
+scraped_df['Mass'] = scraped_df['Mass'].astype(float) * 0.0000954588
+scraped_df = scraped_df.dropna()
+initial_df = pd.read_csv('scraped_data.csv', index_col='id')
+combined_df = pd.concat([initial_df, scraped_df], ignore_index=True)
+combined_df.to_csv('combined_scraped_data.csv', index=True, index_label="id")
+
+print(combined_df)
